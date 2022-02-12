@@ -38,6 +38,31 @@
   button:hover {
     background: #eee;
   }
+  button:disabled {
+    color: #aaa;
+    cursor: default;
+  }
+  #laps {
+    list-style: none;
+    padding: 0;
+    margin: 20px auto;
+    max-width: 320px;
+    text-align: left;
+    font-family: monospace;
+  }
+  #laps li {
+    padding: 6px 10px;
+    border-bottom: 1px solid #ddd;
+    display: flex;
+    justify-content: space-between;
+  }
+  #laps li:first-child {
+    background: #fff8d0;
+  }
+  .delta {
+    color: #888;
+    font-size: 13px;
+  }
 </style>
 </head>
 <body>
@@ -48,25 +73,34 @@
 
 <div class="buttons">
   <button id="startBtn">start</button>
+  <button id="lapBtn" disabled>lap</button>
   <button id="resetBtn">reset</button>
 </div>
 
+<ul id="laps"></ul>
+
 <script>
-  var startTime = 0;
-  var elapsed = 0;
+  // stopwatch
+  // tracks elapsed time in ms, formatted as mm:ss.cc
+
+  var startTime = 0;        // when the current run started
+  var elapsed = 0;          // total elapsed across runs
   var running = false;
   var tickId = null;
+  var lapTotals = [];       // total time at each lap press
 
   var display = document.getElementById('display');
   var startBtn = document.getElementById('startBtn');
+  var lapBtn = document.getElementById('lapBtn');
   var resetBtn = document.getElementById('resetBtn');
+  var lapsList = document.getElementById('laps');
 
   function pad(n) {
     return n < 10 ? '0' + n : '' + n;
   }
 
   function format(ms) {
-    var totalCs = Math.floor(ms / 10);
+    var totalCs = Math.floor(ms / 10); // hundredths
     var cs = totalCs % 100;
     var totalSec = Math.floor(totalCs / 100);
     var s = totalSec % 60;
@@ -82,15 +116,18 @@
 
   function start() {
     if (running) {
+      // pause
       elapsed += Date.now() - startTime;
       clearInterval(tickId);
       running = false;
       startBtn.textContent = 'start';
+      lapBtn.disabled = true;
     } else {
       startTime = Date.now();
       tickId = setInterval(tick, 30);
       running = true;
       startBtn.textContent = 'pause';
+      lapBtn.disabled = false;
     }
   }
 
@@ -99,12 +136,35 @@
     running = false;
     elapsed = 0;
     startTime = 0;
+    lapTotals = [];
     display.textContent = '00:00.00';
     startBtn.textContent = 'start';
+    lapBtn.disabled = true;
+    lapsList.innerHTML = '';
+  }
+
+  function lap() {
+    if (!running) return;
+    var current = elapsed + (Date.now() - startTime);
+    var prev = lapTotals.length > 0 ? lapTotals[lapTotals.length - 1] : 0;
+    var delta = current - prev;
+    lapTotals.push(current);
+
+    // newest lap on top
+    var li = document.createElement('li');
+    var label = document.createElement('span');
+    label.textContent = 'lap ' + lapTotals.length + '  ' + format(current);
+    var d = document.createElement('span');
+    d.className = 'delta';
+    d.textContent = '+' + format(delta);
+    li.appendChild(label);
+    li.appendChild(d);
+    lapsList.insertBefore(li, lapsList.firstChild);
   }
 
   startBtn.addEventListener('click', start);
   resetBtn.addEventListener('click', reset);
+  lapBtn.addEventListener('click', lap);
 </script>
 
 </body>
